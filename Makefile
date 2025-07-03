@@ -14,12 +14,16 @@ DEVICE = arty_a7_35t
 
 SOURCES = $(PROJ_SOURCES) $(PROJ_XDC_FILE)
 
+VIVADO_DIR ?= /tools/Xilinx/Vivado/2019.1
+
 .PHONY: all
 all: $(TARGET)
 
 $(TARGET): $(SOURCES)
 	mkdir -p build
-	/tools/Xilinx/Vivado/2019.1/bin/vivado -mode tcl < $(PROJ).tcl > $(BUILD_DIR)/$(STATUS_FILE)
+	$(VIVADO_DIR)/bin/vivado -mode tcl < $(PROJ).tcl > $(BUILD_DIR)/$(STATUS_FILE)
+	#/tools/Xilinx/Vivado/2019.1/bin/vivado -mode tcl < $(PROJ).tcl > $(BUILD_DIR)/$(STATUS_FILE)
+	#/media/jeff/c6a09b86-d374-458d-91bb-685ca2c65f6a/tools/Xilinx/Vivado/2022.2/bin/vivado -mode tcl < $(PROJ).tcl > $(BUILD_DIR)/$(STATUS_FILE)
 
 install: $(TARGET)
 	openFPGALoader -b $(DEVICE) $<

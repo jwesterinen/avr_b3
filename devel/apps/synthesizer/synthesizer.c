@@ -51,13 +51,14 @@ int main(void)
     // set UART baud rate to 115200
     UBRR0 = 54-1;
 
-    // init displays
-    DISPLAY0 = 0;
-    DISPLAY1 = 0;
-    DISPLAY2 = 0;
-    DISPLAY3 = 0;
+    // initialize everything off
+    DISPLAY0 = VCO1_FREQ = 0;
+    DISPLAY1 = VCO2_FREQ = 0;
+    DISPLAY2 = NOISE_FREQ = 0;
+    DISPLAY3 = LFO_FREQ = 0;
     DP = DP_NONE;
-            
+    
+    // main loop            
     while (1)
     {
         // cache the switches
