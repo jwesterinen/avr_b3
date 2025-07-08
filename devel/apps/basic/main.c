@@ -9,7 +9,6 @@
 #include "../../include/avr_b3_stdio.h"
 #include "../../include/avr_b3_ps2.h"
 #include "../../include/avr_b3_console.h"
-#include "../../include/ff.h"
 #include "../../include/avr_b3_diskio.h"
 #include "symtab.h"
 #include "expr.h"
@@ -228,31 +227,18 @@ void GfxTextMode(uint8_t mode)
     VGA_CUR_STYLE = (mode) ? VGA_CUR_VISIBLE : VGA_CUR_INVISIBLE;
 }
 
-// globals required for SD file system
-FIL       fp;
-FATFS     diskA;
-DIR       topdir;
-FRESULT   retstat;
+// buffer used for load and save
+SD_FILE_BUFFER fileBuffer;
+SD_FILENAME_BUFFER filenameBuf;
 
-char fileBuffer[MAX_PROGRAM_LEN][MAX_CMDLINE_LEN];
-
-bool SdMount(void)
+// mount the root directory
+bool FsMount(void)
 {
-    // initialize SD card, mount FAT filesystem, and open root directory
-    retstat = disk_initialize(0);
-    if (retstat != FR_OK) 
-    {
-        sprintf(errorStr, "mount failed (error %d)\n", retstat);
-        return false;
-    }
-    retstat = f_mount(&diskA, "/", 0);
-    if (retstat != FR_OK) 
-    {
-        sprintf(errorStr, "mount failed (error %d)\n", retstat);
-        return false;
-    }
-    retstat = f_opendir(&topdir, "");
-    if (retstat != FR_OK) 
+    FRESULT retstat;
+    
+    // mount the SD card
+    //if ((retstat = SdMount(&topdir, "/")) != FR_OK) 
+    if ((retstat = SdMount()) != FR_OK) 
     {
         sprintf(errorStr, "mount failed (error %d)\n", retstat);
         return false;
@@ -261,12 +247,15 @@ bool SdMount(void)
     return true;
 }
 
-bool SdUnmount(void)
+// unmount the SD card
+bool FsUnmount(void)
 {
-    retstat = f_unmount("/");
-    if (retstat != FR_OK)
+    FRESULT retstat;
+    
+    //if ((retstat = SdUnmount("/")) != FR_OK)
+    if ((retstat = SdUnmount()) != FR_OK)
     {
-        sprintf(errorStr, "unmount failed (err %d)\n", retstat);
+        sprintf(errorStr, "unmount failed (error %d)\n", retstat);
         return false;
     }
     PutString("...it is safe to remove the disk\n");
@@ -274,41 +263,39 @@ bool SdUnmount(void)
     return true;
 }
 
-bool SdList(void)
+// print a listing of the files on the SD card
+bool FsList(void)
 {
-    FILINFO fno;
+    int fileQty;
+    FRESULT retstat;
     
-    retstat = f_readdir(&topdir, &fno);
-    while ((retstat == FR_OK) && (fno.fname[0])) 
+    if ((retstat = SdList(filenameBuf, &fileQty)) == FR_OK)
     {
-        fno.fname[12] = 0;
-        sprintf(message, "%s\n", fno.fname);
-        PutString(message);
-        retstat = f_readdir(&topdir, &fno);
+        for (int i = 0; i < fileQty; i++)
+        {
+            strcpy(message, filenameBuf[i]);
+            PutString(message);
+        }
     }
-    if (retstat != FR_OK)
+    else
     {
-        sprintf(errorStr, "file listing failed (err %d)\n", retstat);
-        return false;
-    }
-    retstat = f_rewinddir(&topdir);
-    if (retstat != FR_OK)
-    {
-        sprintf(errorStr, "file listing failed (err %d)\n", retstat);
+        sprintf(errorStr, "the file system may not be mounted (error %d)\n", retstat);
         return false;
     }
 
     return true;
 }
 
-bool SdDelete(const char *filename)
+// remove the file from the SD card
+bool FsDelete(const char *filename)
 {
+    FRESULT retstat;
+    
     if (filename != NULL)
     {
-        retstat = f_unlink(filename);
-        if (retstat != FR_OK)
+        if ((retstat = SdDelete(filename)) != FR_OK)
         {
-            sprintf(errorStr, "file delete failed (err=%d)\n", retstat);
+            sprintf(errorStr, "file delete failed (error %d)\n", retstat);
             return false;
         }
     }
@@ -321,49 +308,23 @@ bool SdDelete(const char *filename)
     return true;
 }
 
-bool SdLoad(const char *filename)
+// load the file as the current program
+bool FsLoad(const char *filename)
 {
-    TCHAR *bufptr;
-    int i;
     char *nextChar;
+    FRESULT retstat;
     
     if (filename != NULL)
     {
-        // open the file
-        retstat = f_open(&fp, filename, FA_READ);
-        if (retstat != FR_OK) 
+        
+        if ((retstat = SdLoad(filename, fileBuffer)) != FR_OK) 
         {
-            sprintf(errorStr, "load failed (err %d)\n", retstat);
-            return false;
-        }
-
-        // read the file (until EOF) into the file buffer
-        for (i = 0; i < MAX_PROGRAM_LEN; i++) 
-        {
-            if (f_eof(&fp) != 0)
-            {
-                // stop reading at EOF
-                break;
-            }
-            bufptr = f_gets(fileBuffer[i], MAX_CMDLINE_LEN, &fp);
-            if (bufptr == 0) 
-            {
-                sprintf(errorStr, "load failed (err %d)\n", f_error(&fp));
-                return false;
-            }
-        }
-        strcpy(fileBuffer[i], "");
-
-        // close the file
-        retstat = f_close(&fp);
-        if (retstat != FR_OK) 
-        {
-            sprintf(errorStr, "load failed (err %d)\n", retstat);
+            sprintf(errorStr, "load failed (error %d)\n", retstat);
             return false;
         }
         
         // process each line of the file buffer
-        for (i = 0; fileBuffer[i][0] != '\0'; i++)
+        for (int i = 0; fileBuffer[i][0] != '\0'; i++)
         {
             // remove any line endings
             for (nextChar = fileBuffer[i]; *nextChar != '\0'; nextChar++)
@@ -391,21 +352,14 @@ bool SdLoad(const char *filename)
     return true;
 }
 
-// save the file buffer to a new file
-bool SdSave(const char *filename)
+// save the current program to the file
+bool FsSave(const char *filename)
 {
     int i;
+    FRESULT retstat;
     
     if (filename != NULL)
     {
-        // create a new file
-        retstat = f_open(&fp, filename, (FA_CREATE_ALWAYS | FA_READ | FA_WRITE));
-        if (retstat != FR_OK) 
-        {
-            sprintf(errorStr, "save failed (err %d)\n", retstat);
-            return false;
-        }
-
         // fill the file buffer with the program commands
         for (i = 0; i < programSize; i++)
         {
@@ -414,29 +368,10 @@ bool SdSave(const char *filename)
         }
         strcpy(fileBuffer[i], "");
         
-        // write the buffer contents to the currently open file
-        for (int line = 0; fileBuffer[line][0] != '\0'; line++)
+        // write the file buffer to the file
+        if ((retstat = SdSave(filename, fileBuffer)) != FR_OK) 
         {
-            if (f_puts(fileBuffer[line], &fp) < 0) 
-            {
-                sprintf(errorStr, "save failed at line %d\n", line);
-                return false;
-            }
-        }
-
-        // flushing data to disk
-        retstat = f_sync(&fp);
-        if (retstat != FR_OK) 
-        {
-            sprintf(errorStr, "save failed (err %d)\n", retstat);
-            return false;
-        }
-
-        // close the currently open file
-        retstat = f_close(&fp);
-        if (retstat != FR_OK) 
-        {
-            sprintf(errorStr, "save failed (err %d)\n", retstat);
+            sprintf(errorStr, "save failed (error %d)\n", retstat);
             return false;
         }
     }
@@ -448,6 +383,7 @@ bool SdSave(const char *filename)
 
     return true;
 }
+
 
 int main(void)
 {
@@ -467,7 +403,7 @@ int main(void)
     
     InstallBuiltinFcts();
     InitDisplay();
-    SdMount();
+    FsMount();
     while (1)
     {
         if (ready)

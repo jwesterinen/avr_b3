@@ -46,10 +46,11 @@ void GfxSetFGColor(uint8_t color);
 void GfxSetBGColor(uint8_t color);
 
 // basic file system
-bool SdMount(void);
-bool SdUnmount(void);
-bool SdList(void);
-bool SdDelete(const char *filename);
-bool SdLoad(const char *filename);
-bool SdSave(const char *filename);
+bool FsMount(void);
+bool FsUnmount(void);
+bool FsList(void);
+bool FsDelete(const char *filename);
+bool FsLoad(const char *filename);
+bool FsSave(const char *filename);
+
 

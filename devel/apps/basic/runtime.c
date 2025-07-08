@@ -181,38 +181,38 @@ bool ProcessCommand(char *commandStr)
     strcpy(commandBuf, commandStr);
     if (!strcmp(strtok(commandBuf, " "), "mount"))
     {
-        return SdMount();
+        return FsMount();
     }
     strcpy(commandBuf, commandStr);
     if (!strcmp(strtok(commandBuf, " "), "unmount"))
     {
-        return SdUnmount();
+        return FsUnmount();
     }
     strcpy(commandBuf, commandStr);
     if (!strcmp(strtok(commandBuf, " "), "files"))
     {
         if ((filename = strtok(NULL, " ")) != NULL)
             return false;
-        return SdList();
+        return FsList();
     }    
     strcpy(commandBuf, commandStr);
     if (!strcmp(strtok(commandBuf, " "), "delete"))
     {
         filename = strtok(NULL, " ");
-        return SdDelete(filename);
+        return FsDelete(filename);
     }
     strcpy(commandBuf, commandStr);
     if (!strcmp(strtok(commandBuf, " "), "load"))
     {
         NewProgram();
         filename = strtok(NULL, " ");
-        return SdLoad(filename);
+        return FsLoad(filename);
     }
     strcpy(commandBuf, commandStr);
     if (!strcmp(strtok(commandBuf, " "), "save"))
     {
         filename = strtok(NULL, " ");
-        return SdSave(filename);
+        return FsSave(filename);
     }
     
     // init the lexer and parse the command to create the IR
