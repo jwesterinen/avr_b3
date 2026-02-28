@@ -25,5 +25,6 @@ clean-all:
 	$(MAKE) -C console clean-all
 	$(MAKE) -C basic clean-all
 	$(MAKE) -C sdcard clean-all
+	$(MAKE) -C bios clean-all
 	
 

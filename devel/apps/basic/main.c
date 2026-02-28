@@ -7,6 +7,7 @@
 #include <string.h>
 #include "../../include/avr_b3.h"
 #include "../../include/avr_b3_stdio.h"
+#include "../../include/avr_b3_fileio.h"
 #include "../../include/avr_b3_ps2.h"
 #include "../../include/avr_b3_console.h"
 #include "../../include/avr_b3_diskio.h"

@@ -89,5 +89,16 @@
 `define BAUD115200   2'b11
 
 
+/////////////////////////////////////////////////////////////////////////
+//
+//  Peripheral address map
+`define BASIC_IO_SELECT 4'h0
+`define KEYPAD_SELECT   4'h1
+`define SOUND_SELECT    4'h2
+`define VGATERM_SELECT  4'h3
+`define PS2_SELECT      4'h4
+`define SD_SELECT       4'h5
+`define MMU_SELECT      4'h6
+
 // Force error when implicit net has no type.
 //`default_nettype none

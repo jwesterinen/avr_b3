@@ -17,12 +17,12 @@
 
 // UCSRA
 #define RXB8    0
-#define PE		2
-#define DOR		3
-#define FE		4
+#define PE        2
+#define DOR        3
+#define FE        4
 #define UDRE    5
-#define TXC		6
-#define RXC		7
+#define TXC        6
+#define RXC        7
 
 // UCSRB
 #define TXB8    0
@@ -32,7 +32,7 @@
 #define USBS    4
 #define UDRIE   5
 #define TXCIE   6
-#define RXCIE   7	
+#define RXCIE   7    
 
 
 // memory mapped I/O
@@ -47,8 +47,24 @@
 #define MMIO_BASE_KEYPAD    0x0100  // reg addrs 0xf100-0xf1ff
 #define MMIO_BASE_SOUND     0x0200  // reg addrs 0xf200-0xf2ff
 #define MMIO_BASE_VGATERM   0x0300  // reg addrs 0xf300-0xf3ff
-#define MMIO_BASE_PS2  0x0400  // reg addrs 0xf400-0xf4ff
+#define MMIO_BASE_PS2       0x0400  // reg addrs 0xf400-0xf4ff
 #define MMIO_BASE_SDCARD    0x0500  // reg addrs 0xf500-0xf5ff
+#define MMIO_BASE_MMU       0x0600  // reg addrs 0xf600-0xf6ff
+
+// MMU 
+//      Reg 0:  Low 8 bits of ROM address
+//      Reg 1:  High bits of ROM address
+//      Reg 2:  Low 8 bits of read/write data to ROM
+//      Reg 3:  High 8 bits of read/write data to ROM
+// The actual write to ROM occurs when writing to Reg 3.  Note
+// that reading or writing to Reg 3 increments the ROM address.
+// This makes coping a block of code a little easier since you
+// don't have to set the address before each write.
+#define MMU_START_ADDR          __MMIOR_ADDR(MMIO_BASE_MMU+0x00)
+#define MMU_ADDR_LOW            __MMIOR(MMIO_BASE_MMU+0x00)
+#define MMU_ADDR_HIGH           __MMIOR(MMIO_BASE_MMU+0x01)
+#define MMU_INSTR_LOW           __MMIOR(MMIO_BASE_MMU+0x02)
+#define MMU_INSTR_HIGH          __MMIOR(MMIO_BASE_MMU+0x03)
 
 // basic I/O
 #define SW          __MMIOW(MMIO_BASE_BASIC_IO+0x00)    // all switches
@@ -186,6 +202,8 @@
 #define PS2_READY_COUNT         __MMIOR(MMIO_BASE_PS2+0x80)
 
 // SD card
-#define SD_DATA     __MMIOR(MMIO_BASE_SDCARD+0x00) // Transmit data on write, receive data on read
-#define SD_STATUS   __MMIOR(MMIO_BASE_SDCARD+0x01) // Configuration on write, buffer status on read
+// Transmit data on write, receive data on read
+#define SD_DATA     __MMIOR(MMIO_BASE_SDCARD+0x00)
+// Configuration on write, buffer status on read
+#define SD_STATUS   __MMIOR(MMIO_BASE_SDCARD+0x01) 
 

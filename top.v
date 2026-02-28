@@ -27,18 +27,18 @@
 module priority_encoder ( input [3:0] irq_lines , output iflag, output reg [1:0] ivect );
 
     always @(*) begin
-	    if (irq_lines[0])       ivect = 0;
-	    else if (irq_lines[1])  ivect = 1;
-	    else if (irq_lines[2])  ivect = 2;
-	    else if (irq_lines[3])  ivect = 3;
-	    else                    ivect = 0;
+        if (irq_lines[0])       ivect = 0;
+        else if (irq_lines[1])  ivect = 1;
+        else if (irq_lines[2])  ivect = 2;
+        else if (irq_lines[3])  ivect = 3;
+        else                    ivect = 0;
     end
 
-    assign	iflag = |irq_lines;
+    assign    iflag = |irq_lines;
 
 endmodule
 
-module avr_b3(	
+module avr_b3(    
     input  clk,         // 100MHz clock
     input [15:0] sw,    // switches
     input [4:0] btn,    // buttons - C (00001), U (00010), L (00100), R (01000), D (10000)
@@ -69,15 +69,15 @@ module avr_b3(
     input  sdcd
 );
 
-    wire			io_re;
-    wire			io_we;
-    wire [5:0]		io_a;
-    wire [7:0]		io_do;
-    wire [7:0]      io_di;
+    wire io_re;
+    wire io_we;
+    wire [5:0] io_a;
+    wire [7:0] io_do;
+    wire [7:0] io_di;
 
     wire system_rst;
     assign system_rst = btn[0];
-    
+ 
     wire [7:0] uart0_io_dout;
     wire [7:0] basic_io_dout;
     wire [7:0] keypad_io_dout;
@@ -89,12 +89,11 @@ module avr_b3(
     clocks clks(clk, system_clk, sysclks);
     
     // ROM
-    parameter pmem_width = 15;      // 15-bit width = 32K program space, BUT the AVR pmem works in _words_, so it's actually 64K _bytes_
-    wire			pmem_ce;
-    wire [pmem_width-1:0]	pmem_a;
-    wire [15:0]		pmem_d;
-    flash core0_flash(system_clk, pmem_ce, pmem_a, pmem_d); // pmem addrs 0x000-0x7fff (words!)
-    defparam core0_flash.flash_width = pmem_width;
+    // 15-bit addr=32K program space, BUT AVR pmem uses _words_, so it's 64K _bytes_
+    parameter pmem_width = 15;
+    wire   pmem_ce;
+    wire   [pmem_width-1:0] pmem_a;
+    wire   [15:0] pmem_d;
 
     // CPU data bus for RAM and MMIO
     parameter dmem_width = 16;      // 64K
@@ -125,8 +124,11 @@ module avr_b3(
     mmio core0_mmio
     (
         system_clk, sysclks, mmio_re, mmio_we, rio_a[11:0], mmio_di, dmem_do, 
-        sw, btn, led, seg, dp, an, JBU, JBL, JA7, vgaBlue, vgaGreen, vgaRed,
-        Vsync, Hsync, PS2Clk, PS2Data, PS2irq, sdsck, sdmiso, sdmosi, sdcs, sdcd
+        pmem_ce, pmem_a, pmem_d,
+        sw, btn, led, seg, dp, an, JBU, JBL, JA7,
+        vgaBlue, vgaGreen, vgaRed, Vsync, Hsync,
+        PS2Clk, PS2Data, PS2irq,
+        sdsck, sdmiso, sdmosi, sdcs, sdcd
     );
 
     // Select between RAM and MMIO and latch value on read of either
@@ -152,14 +154,14 @@ module avr_b3(
     priority_encoder irq0 ( { |uart0_irq[2:0], PS2irq, 1'b0, 1'b0 }, iflag, ivect );
 
     avr_core core0 
-    (	
+    (    
         system_clk, system_rst,
-	    pmem_ce, pmem_a, pmem_d, 
-	    dmem_re, dmem_we, dmem_a, dmem_di, dmem_do,
-	    io_re, io_we, io_a, io_di, io_do,
-	    iflag, ivect,
-	    core0_mode,
-	    ieack
+        pmem_ce, pmem_a, pmem_d, 
+        dmem_re, dmem_we, dmem_a, dmem_di, dmem_do,
+        io_re, io_we, io_a, io_di, io_do,
+        iflag, ivect,
+        core0_mode,
+        ieack
     );
     defparam core0.pmem_width = pmem_width;
     defparam core0.dmem_width = dmem_width;
@@ -168,7 +170,7 @@ module avr_b3(
     defparam core0.lsb_call = 0;
     
     // uart
-    wire uart0_io_select = (io_a[5:2] == 4'b0100);			// I/O addr range 1000xx, regs 0x10-0x13
+    wire uart0_io_select = (io_a[5:2] == 4'b0100);            // I/O addr range 1000xx, regs 0x10-0x13
     wire uart0_io_re = (uart0_io_select ? io_re : 1'b0);
     wire uart0_io_we = (uart0_io_select ? io_we : 1'b0);
     wire uart0_txd;
@@ -179,10 +181,10 @@ module avr_b3(
     assign uart0_rxd = RsRx; 
 
     avr_io_uart uart0 
-    (	system_clk, system_rst, 
-	    uart0_io_re, uart0_io_we, io_a[1:0], io_di, io_do,
-	    uart0_txd, uart0_rxd,
-	    uart0_irq
+    (    system_clk, system_rst, 
+        uart0_io_re, uart0_io_we, io_a[1:0], io_di, io_do,
+        uart0_txd, uart0_rxd,
+        uart0_irq
     );
 endmodule
 

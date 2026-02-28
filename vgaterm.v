@@ -1,4 +1,4 @@
-// *********************************************************
+
 // Copyright (c) 2023 Demand Peripherals, Inc.
 // 
 // This file is licensed separately for private and commercial
@@ -389,7 +389,10 @@ endmodule
 
     always@(posedge rclk)
     begin
-        rdreg <= ram[rdaddr];
+        // Bogus logic to force non-block-RAM of the buffer.
+        // This frees a ram mux for the dual boot/app rom switch.
+        rdreg <= (rdaddr == 12'hFFF) ? 21'h0 : ram[rdaddr];
+        //rdreg <= ram[rdaddr];
     end
 
     assign rd = rdreg;

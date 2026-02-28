@@ -21,6 +21,8 @@
 `define PS2_SELECT      4'h4
 `define SD_SELECT       4'h5
 
+parameter pmem_width = 16;
+
 module mmio
 (  
     input    system_clk,    // CPU clock
@@ -30,6 +32,9 @@ module mmio
     input    [11:0] addr,
     output   [7:0] data_read,
     input    [7:0] data_write,
+    input    pmem_ce,
+    input    [pmem_width-1:0] pmem_a,
+    output   [15:0]pmem_d,
 
     input   [15:0] sw,      // switches
     input   [4:0] btn,      // buttons
@@ -76,12 +81,7 @@ module mmio
     // Pmod keypad
     wire keypad_select = (addr[11:8] == `KEYPAD_SELECT);
     wire keypad_re = keypad_select & re;
-	keypad_b3 keypad
-	(
-	    system_clk, 
-	    keypad_dout, keypad_re, 
-	    JBU, JBL
-	);
+    keypad_b3 keypad ( system_clk, keypad_dout, keypad_re, JBU, JBL);
 
     // sound generator w/Pmod amp/speaker
     wire sound_select = (addr[11:8] == `SOUND_SELECT);
@@ -135,6 +135,16 @@ module mmio
         sdsck, sdmiso, sdmosi, sdcs, sdcd
     );
 
+
+    // ROM and MMU
+    wire [7:0] mmu_dout;
+    wire mmu_select = (addr[11:8] == `MMU_SELECT);
+    wire mmu_re = mmu_select & re;
+    wire mmu_we = mmu_select & we;
+    defparam core0_flash.pmem_width = pmem_width;
+    flash core0_flash(system_clk, addr[7:0], mmu_dout, data_write,
+        mmu_re, mmu_we, pmem_ce, pmem_a, pmem_d);
+
     // latch peripheral output
     always @(posedge system_clk) begin
         out_buf <= (basic_io_select && re)  ? basic_io_dout :
@@ -143,6 +153,7 @@ module mmio
                    (vgaterm_select && re)   ? vgaterm_dout  :
                    (ps2_select && re)       ? ps2_dout :
                    (sd_select && re)        ? sd_dout :
+                   (mmu_select && re)       ? mmu_dout :
                    out_buf;
     end
     assign data_read = out_buf;
